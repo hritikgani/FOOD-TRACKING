@@ -57,8 +57,11 @@ def _local_pg_dsn(app):
             import pgserver
         except ImportError as e:
             raise RuntimeError(
-                "DATABASE_URL is not set and the local dev Postgres package "
-                "isn't installed. Run: pip install -r requirements-dev.txt"
+                "DATABASE_URL environment variable is not set. In production "
+                "(Vercel), set DATABASE_URL to your Postgres connection string "
+                "in the project's environment variables. For local development "
+                "without setting it, install the dev extras instead: "
+                "pip install -r requirements-dev.txt"
             ) from e
         pgdata = Path(app.config["LOCAL_PGDATA_DIR"])
         pgdata.parent.mkdir(parents=True, exist_ok=True)
