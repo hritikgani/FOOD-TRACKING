@@ -18,11 +18,12 @@ def get_or_create_restaurant(name: str) -> int:
         return row["id"]
 
     cur = db.execute(
-        "INSERT INTO restaurants (name, normalized_name) VALUES (?, ?)",
+        "INSERT INTO restaurants (name, normalized_name) VALUES (?, ?) RETURNING id",
         (name, normalized),
     )
+    new_id = cur.fetchone()["id"]
     db.commit()
-    return cur.lastrowid
+    return new_id
 
 
 def list_restaurants():
@@ -65,7 +66,7 @@ def restaurant_summaries(sort_by: str = "orders", order: str = "desc"):
             MAX(o.order_date) AS last_order_date
         FROM restaurants r
         JOIN orders o ON o.restaurant_id = r.id
-        GROUP BY r.id
+        GROUP BY r.id, r.name
         ORDER BY {column} {direction}
         """
     ).fetchall()

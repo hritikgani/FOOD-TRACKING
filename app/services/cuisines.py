@@ -15,9 +15,10 @@ def get_or_create_cuisine(name: str) -> int | None:
     if row:
         return row["id"]
 
-    cur = db.execute("INSERT INTO cuisines (name) VALUES (?)", (name,))
+    cur = db.execute("INSERT INTO cuisines (name) VALUES (?) RETURNING id", (name,))
+    new_id = cur.fetchone()["id"]
     db.commit()
-    return cur.lastrowid
+    return new_id
 
 
 def list_cuisines():
@@ -29,6 +30,6 @@ def seed_default_cuisines(names: list[str]):
     db = get_db()
     for name in names:
         db.execute(
-            "INSERT OR IGNORE INTO cuisines (name) VALUES (?)", (name,)
+            "INSERT INTO cuisines (name) VALUES (?) ON CONFLICT (name) DO NOTHING", (name,)
         )
     db.commit()

@@ -1,20 +1,18 @@
-PRAGMA foreign_keys = ON;
-
 CREATE TABLE IF NOT EXISTS restaurants (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     normalized_name TEXT NOT NULL UNIQUE,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+    updated_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS cuisines (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     name TEXT NOT NULL UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS orders (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     order_date TEXT NOT NULL,
     order_time TEXT,
     platform TEXT NOT NULL CHECK (platform IN ('zomato', 'swiggy')),
@@ -27,12 +25,12 @@ CREATE TABLE IF NOT EXISTS orders (
     tax REAL,
     total_amount REAL NOT NULL,
     notes TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+    updated_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS order_items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     item_name TEXT NOT NULL,
     normalized_item_name TEXT NOT NULL,
@@ -44,6 +42,16 @@ CREATE TABLE IF NOT EXISTS order_items (
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT
+);
+
+-- CSV/XLSX import is a multi-request flow (upload -> map -> preview ->
+-- confirm). On serverless (Vercel) each request can land on a different,
+-- disposable container, so the in-progress session can't live on local
+-- disk -- it has to be in the database like everything else.
+CREATE TABLE IF NOT EXISTS import_sessions (
+    id TEXT PRIMARY KEY,
+    payload JSONB NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(order_date);

@@ -1,0 +1,6 @@
+-r requirements.txt
+
+# Local-only: gives `python run.py` a real embedded Postgres with zero setup
+# (bundles a Postgres binary, so it's deliberately excluded from
+# requirements.txt / the Vercel production build).
+pgserver==0.1.4

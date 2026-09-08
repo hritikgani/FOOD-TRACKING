@@ -70,7 +70,7 @@ def kpi_summary(date_from=None, date_to=None) -> dict:
         SELECT r.name AS name, COUNT(*) AS c FROM orders o
         JOIN restaurants r ON r.id = o.restaurant_id
         {where}
-        GROUP BY o.restaurant_id ORDER BY c DESC LIMIT 1
+        GROUP BY o.restaurant_id, r.name ORDER BY c DESC LIMIT 1
         """,
         params,
     ).fetchone()
@@ -80,7 +80,7 @@ def kpi_summary(date_from=None, date_to=None) -> dict:
         SELECT c.name AS name, COUNT(*) AS cnt FROM orders o
         JOIN cuisines c ON c.id = o.cuisine_id
         {where}
-        GROUP BY o.cuisine_id ORDER BY cnt DESC LIMIT 1
+        GROUP BY o.cuisine_id, c.name ORDER BY cnt DESC LIMIT 1
         """,
         params,
     ).fetchone()
@@ -144,7 +144,7 @@ def monthly_spending(months_back=12) -> list[dict]:
     start = (date.today().replace(day=1) - timedelta(days=months_back * 31)).replace(day=1).isoformat()
     rows = db.execute(
         """
-        SELECT strftime('%Y-%m', order_date) AS month,
+        SELECT to_char(order_date::date, 'YYYY-MM') AS month,
                COUNT(*) AS order_count,
                COALESCE(SUM(total_amount), 0) AS total_spent
         FROM orders
@@ -182,7 +182,7 @@ def top_restaurants(limit=5, sort_by="orders") -> list[dict]:
                MAX(o.order_date) AS last_order_date
         FROM restaurants r
         JOIN orders o ON o.restaurant_id = r.id
-        GROUP BY r.id
+        GROUP BY r.id, r.name
         ORDER BY {column} DESC
         LIMIT ?
         """,
@@ -211,7 +211,7 @@ def cuisine_distribution() -> list[dict]:
                COALESCE(SUM(o.total_amount), 0) AS total_spent
         FROM cuisines c
         JOIN orders o ON o.cuisine_id = c.id
-        GROUP BY c.id
+        GROUP BY c.id, c.name
         ORDER BY order_count DESC
         """
     ).fetchall()
@@ -332,7 +332,7 @@ def repeat_restaurant_stats() -> dict:
                MAX(o.order_date) AS last_order_date
         FROM restaurants r
         JOIN orders o ON o.restaurant_id = r.id
-        GROUP BY r.id
+        GROUP BY r.id, r.name
         """
     ).fetchall()
 
@@ -385,7 +385,7 @@ def monthly_growth() -> float | None:
     db = get_db()
     rows = db.execute(
         """
-        SELECT strftime('%Y-%m', order_date) AS month, COALESCE(SUM(total_amount),0) AS total
+        SELECT to_char(order_date::date, 'YYYY-MM') AS month, COALESCE(SUM(total_amount),0) AS total
         FROM orders GROUP BY month ORDER BY month DESC LIMIT 2
         """
     ).fetchall()

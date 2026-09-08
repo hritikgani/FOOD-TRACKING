@@ -65,6 +65,7 @@ def create_order(cleaned: dict) -> int:
             order_date, order_time, platform, restaurant_id, cuisine_id,
             subtotal, discount, delivery_fee, platform_fee, tax, total_amount, notes
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        RETURNING id
         """,
         (
             cleaned["order_date"],
@@ -81,7 +82,7 @@ def create_order(cleaned: dict) -> int:
             cleaned.get("notes"),
         ),
     )
-    order_id = cur.lastrowid
+    order_id = cur.fetchone()["id"]
 
     items = parse_food_items(cleaned.get("food_items"))
     if items:
@@ -101,7 +102,7 @@ def update_order(order_id: int, cleaned: dict) -> None:
         UPDATE orders SET
             order_date = ?, order_time = ?, platform = ?, restaurant_id = ?, cuisine_id = ?,
             subtotal = ?, discount = ?, delivery_fee = ?, platform_fee = ?, tax = ?,
-            total_amount = ?, notes = ?, updated_at = datetime('now')
+            total_amount = ?, notes = ?, updated_at = now()
         WHERE id = ?
         """,
         (
@@ -200,11 +201,13 @@ def list_orders(
         conditions.append("o.total_amount <= ?")
         params.append(max_amount)
     if search:
+        # ILIKE, not LIKE -- Postgres's LIKE is case-sensitive (unlike
+        # SQLite's default), and this search is meant to be case-insensitive.
         like = f"%{search.strip()}%"
         conditions.append(
             """
-            (r.name LIKE ? OR c.name LIKE ? OR EXISTS (
-                SELECT 1 FROM order_items oi WHERE oi.order_id = o.id AND oi.item_name LIKE ?
+            (r.name ILIKE ? OR c.name ILIKE ? OR EXISTS (
+                SELECT 1 FROM order_items oi WHERE oi.order_id = o.id AND oi.item_name ILIKE ?
             ))
             """
         )

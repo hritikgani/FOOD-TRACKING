@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import csv
 import io
-import json
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timezone
+from decimal import Decimal
 from pathlib import Path
 
-from flask import current_app
+import psycopg2.extras
 from openpyxl import load_workbook
 
+from app.db import get_db
 from app.services.orders import check_possible_duplicate, create_order
 from app.services.validation import validate_order_fields
 from app.utils.normalize import normalize_name
@@ -52,13 +53,18 @@ TARGET_FIELD_LABELS = {
     "notes": "Notes",
 }
 
-IMPORT_DIR_NAME = "imports"
-
-
-def _import_dir() -> Path:
-    d = Path(current_app.config["DATABASE_PATH"]).parent / IMPORT_DIR_NAME
-    d.mkdir(parents=True, exist_ok=True)
-    return d
+def _xlsx_cell_to_json_safe(cell):
+    """openpyxl returns native datetime/date/time/Decimal objects for
+    formatted cells, none of which are JSON-serializable -- and the session
+    payload gets stored as JSONB. Normalize at the source so every consumer
+    downstream just sees plain strings/numbers, same as a CSV would produce."""
+    if cell is None:
+        return ""
+    if isinstance(cell, (datetime, date, time)):
+        return cell.isoformat()
+    if isinstance(cell, Decimal):
+        return float(cell)
+    return cell
 
 
 def read_upload(file_storage):
@@ -74,7 +80,7 @@ def read_upload(file_storage):
         wb = load_workbook(io.BytesIO(file_storage.read()), data_only=True)
         ws = wb.active
         rows = [
-            ["" if cell is None else cell for cell in row]
+            [_xlsx_cell_to_json_safe(cell) for cell in row]
             for row in ws.iter_rows(values_only=True)
         ]
     else:
@@ -141,23 +147,27 @@ def create_session(filename: str, headers: list[str], rows: list[dict], mapping:
 
 
 def load_session(session_id: str) -> dict | None:
-    path = _import_dir() / f"{session_id}.json"
-    if not path.exists():
-        return None
-    with open(path) as f:
-        return json.load(f)
+    db = get_db()
+    row = db.execute("SELECT payload FROM import_sessions WHERE id = ?", (session_id,)).fetchone()
+    return row["payload"] if row else None
 
 
 def save_session(session_id: str, payload: dict):
-    path = _import_dir() / f"{session_id}.json"
-    with open(path, "w") as f:
-        json.dump(payload, f)
+    db = get_db()
+    db.execute(
+        """
+        INSERT INTO import_sessions (id, payload) VALUES (?, ?)
+        ON CONFLICT (id) DO UPDATE SET payload = excluded.payload
+        """,
+        (session_id, psycopg2.extras.Json(payload)),
+    )
+    db.commit()
 
 
 def delete_session(session_id: str):
-    path = _import_dir() / f"{session_id}.json"
-    if path.exists():
-        path.unlink()
+    db = get_db()
+    db.execute("DELETE FROM import_sessions WHERE id = ?", (session_id,))
+    db.commit()
 
 
 def apply_mapping(rows: list[dict], mapping: dict, fixed_platform: str | None = None) -> list[dict]:

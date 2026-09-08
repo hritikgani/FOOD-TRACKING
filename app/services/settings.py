@@ -40,5 +40,7 @@ def clear_all_data():
     db.execute("DELETE FROM orders")
     db.execute("DELETE FROM restaurants")
     db.execute("DELETE FROM cuisines")
-    db.execute("DELETE FROM sqlite_sequence WHERE name IN ('orders','order_items','restaurants','cuisines')")
+    db.execute("DELETE FROM import_sessions")
+    for seq in ("orders_id_seq", "order_items_id_seq", "restaurants_id_seq", "cuisines_id_seq"):
+        db.execute(f"ALTER SEQUENCE {seq} RESTART WITH 1")
     db.commit()

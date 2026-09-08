@@ -1,36 +1,54 @@
-import shutil
 import tempfile
 import unittest
-from pathlib import Path
 
 from app import create_app
 from app.config import Config
 from app.services import analytics
 from app.services import orders as orders_service
 from app.services.importer import auto_detect_mapping
+from app.services.settings import clear_all_data
 from app.services.validation import validate_order_fields
 from app.utils.normalize import normalize_name
 
-
-class TestConfig(Config):
-    pass
+_TEST_APP = None
 
 
-class AnalyticsTestCase(unittest.TestCase):
-    """Exercises the aggregation math in app/services/analytics.py against a
-    real (temp file) SQLite database -- these are the numbers the dashboard
-    and analytics pages are built on, so they're worth pinning down."""
+def _get_test_app():
+    """One embedded Postgres instance (via `pgserver`) shared across the
+    whole test run -- starting a fresh Postgres per test would be slow.
+    Tests get isolation by truncating tables in setUp instead."""
+    global _TEST_APP
+    if _TEST_APP is None:
+        pgdata = tempfile.mkdtemp(prefix="fot_test_pgdata_")
+
+        class TestConfig(Config):
+            DATABASE_URL = None
+            LOCAL_PGDATA_DIR = pgdata
+
+        _TEST_APP = create_app(TestConfig)
+    return _TEST_APP
+
+
+class PostgresTestCase(unittest.TestCase):
+    """Base class for tests that touch the database."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = _get_test_app()
 
     def setUp(self):
-        self.tmp_dir = tempfile.mkdtemp()
-        TestConfig.DATABASE_PATH = str(Path(self.tmp_dir) / "test.db")
-        self.app = create_app(TestConfig)
         self.ctx = self.app.app_context()
         self.ctx.push()
+        clear_all_data()
 
     def tearDown(self):
         self.ctx.pop()
-        shutil.rmtree(self.tmp_dir, ignore_errors=True)
+
+
+class AnalyticsTestCase(PostgresTestCase):
+    """Exercises the aggregation math in app/services/analytics.py against a
+    real Postgres database -- these are the numbers the dashboard and
+    analytics pages are built on, so they're worth pinning down."""
 
     def _add_order(self, **overrides):
         data = {
@@ -87,6 +105,15 @@ class AnalyticsTestCase(unittest.TestCase):
         self.assertEqual(dist["Night"]["order_count"], 1)
         self.assertEqual(dist["Morning"]["order_count"], 0)
 
+    def test_monthly_spending_grouping(self):
+        self._add_order(order_date="2026-08-15", total_amount="150")
+        self._add_order(order_date="2026-09-01", total_amount="250")
+        self._add_order(order_date="2026-09-20", total_amount="100")
+        monthly = {row["month"]: row for row in analytics.monthly_spending(months_back=12)}
+        self.assertEqual(monthly["2026-08"]["total_spent"], 150)
+        self.assertEqual(monthly["2026-09"]["total_spent"], 350)
+        self.assertEqual(monthly["2026-09"]["label"], "Sep 2026")
+
     def test_duplicate_detection(self):
         self._add_order(restaurant="Dup Place", total_amount="250", order_date="2026-09-05")
         self.assertTrue(
@@ -102,6 +129,20 @@ class AnalyticsTestCase(unittest.TestCase):
         kpis = analytics.kpi_summary()
         self.assertEqual(kpis["unique_restaurants"], 1)
         self.assertEqual(kpis["total_orders"], 2)
+
+    def test_search_is_case_insensitive(self):
+        # Postgres's LIKE is case-sensitive (unlike SQLite's default) --
+        # list_orders' search must use ILIKE or this regresses.
+        self._add_order(restaurant="Pizza Hut")
+        for term in ("pizza", "PIZZA", "Pizza"):
+            result = orders_service.list_orders(search=term)
+            self.assertEqual(result["total"], 1, f"search={term!r} should match 'Pizza Hut'")
+
+    def test_ids_restart_after_clear_all_data(self):
+        first_id = self._add_order()
+        clear_all_data()
+        second_id = self._add_order()
+        self.assertEqual(first_id, second_id)
 
 
 class NormalizeTestCase(unittest.TestCase):
