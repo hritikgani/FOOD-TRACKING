@@ -90,7 +90,7 @@
   <div class="table-scroll">
     <table class="w-full text-sm">
       <thead>
-        <tr class="text-left text-xs text-slate-500 uppercase tracking-wide border-b border-slate-100 bg-slate-50">
+        <tr class="text-left text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60">
           <th class="py-2.5 px-4">Date</th>
           <th class="py-2.5 px-4">Platform</th>
           <th class="py-2.5 px-4">Restaurant</th>
@@ -99,19 +99,19 @@
           <th class="py-2.5 px-4 text-right">Actions</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-slate-50">
+      <tbody class="divide-y divide-slate-50 dark:divide-slate-800">
         {% for order in result.orders %}
-        <tr class="hover:bg-slate-50">
-          <td class="py-2.5 px-4 whitespace-nowrap text-slate-600 cursor-pointer" onclick="window.location='{{ url_for('orders.detail', order_id=order.id) }}'">{{ order.order_date|friendly_date }}</td>
+        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+          <td class="py-2.5 px-4 whitespace-nowrap text-slate-600 dark:text-slate-300 cursor-pointer" onclick="window.location='{{ url_for('orders.detail', order_id=order.id) }}'">{{ order.order_date|friendly_date }}</td>
           <td class="py-2.5 px-4">{{ m.platform_badge(order.platform) }}</td>
-          <td class="py-2.5 px-4 font-medium text-slate-800 cursor-pointer" onclick="window.location='{{ url_for('orders.detail', order_id=order.id) }}'">{{ order.restaurant_name }}</td>
-          <td class="py-2.5 px-4 text-slate-500">{{ order.cuisine_name or "—" }}</td>
-          <td class="py-2.5 px-4 text-right font-medium text-slate-800 whitespace-nowrap">{{ currency_symbol }}{{ order.total_amount|money }}</td>
+          <td class="py-2.5 px-4 font-medium text-slate-800 dark:text-slate-200 cursor-pointer" onclick="window.location='{{ url_for('orders.detail', order_id=order.id) }}'">{{ order.restaurant_name }}</td>
+          <td class="py-2.5 px-4 text-slate-500 dark:text-slate-400">{{ order.cuisine_name or "—" }}</td>
+          <td class="py-2.5 px-4 text-right font-medium text-slate-800 dark:text-slate-200 whitespace-nowrap">{{ currency_symbol }}{{ order.total_amount|money }}</td>
           <td class="py-2.5 px-4">
             <div class="flex justify-end gap-3 text-xs font-medium">
-              <a href="{{ url_for('orders.edit', order_id=order.id) }}" class="text-slate-500 hover:text-slate-800">Edit</a>
+              <a href="{{ url_for('orders.edit', order_id=order.id) }}" class="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">Edit</a>
               <form method="post" action="{{ url_for('orders.delete', order_id=order.id) }}" data-confirm="Delete this order? This can't be undone.">
-                <button type="submit" class="text-red-500 hover:text-red-700">Delete</button>
+                <button type="submit" class="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-400">Delete</button>
               </form>
             </div>
           </td>
@@ -124,16 +124,16 @@
 
 {% if result.total_pages > 1 %}
 <div class="flex items-center justify-between mt-4 text-sm">
-  <span class="text-slate-500">Page {{ result.page }} of {{ result.total_pages }}</span>
+  <span class="text-slate-500 dark:text-slate-400">Page {{ result.page }} of {{ result.total_pages }}</span>
   <div class="flex gap-2">
     {% set base_args = filters.to_dict() %}
     {% if result.page > 1 %}
     {% set _ = base_args.update({'page': result.page - 1}) %}
-    <a href="?{{ base_args|urlencode }}" class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">Previous</a>
+    <a href="?{{ base_args|urlencode }}" class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60">Previous</a>
     {% endif %}
     {% if result.page < result.total_pages %}
     {% set _ = base_args.update({'page': result.page + 1}) %}
-    <a href="?{{ base_args|urlencode }}" class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">Next</a>
+    <a href="?{{ base_args|urlencode }}" class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60">Next</a>
     {% endif %}
   </div>
 </div>
