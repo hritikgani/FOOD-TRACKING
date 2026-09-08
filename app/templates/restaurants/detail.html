@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m %}
+{% block title %}{{ restaurant.name }} · Food Order Tracker{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('restaurants.index') }}" class="inline-flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 mb-4">← Back to Restaurants</a>
+
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{{ restaurant.name }}</h1>
+</div>
+
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  {{ m.kpi_card("Orders", stats.order_count, icon="🧾") }}
+  {{ m.kpi_card("Total Spent", currency_symbol + (stats.total_spent|money), icon="💰") }}
+  {{ m.kpi_card("Avg Order", currency_symbol + (stats.avg_order_value|money), icon="📊") }}
+  {{ m.kpi_card("Ordering Since", stats.first_order_date|friendly_date, sub="Last: " + (stats.last_order_date|friendly_date), icon="📅") }}
+</div>
+
+<div class="card overflow-hidden">
+  <div class="p-5 pb-3"><h3 class="font-semibold text-slate-800 dark:text-slate-200">Order History</h3></div>
+  <div class="table-scroll">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60">
+          <th class="py-2.5 px-4">Date</th>
+          <th class="py-2.5 px-4">Platform</th>
+          <th class="py-2.5 px-4">Cuisine</th>
+          <th class="py-2.5 px-4 text-right">Amount</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50 dark:divide-slate-800">
+        {% for order in orders %}
+        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/60 cursor-pointer" onclick="window.location='{{ url_for('orders.detail', order_id=order.id) }}'">
+          <td class="py-2.5 px-4 whitespace-nowrap text-slate-600 dark:text-slate-300">{{ order.order_date|friendly_date }}</td>
+          <td class="py-2.5 px-4">{{ m.platform_badge(order.platform) }}</td>
+          <td class="py-2.5 px-4 text-slate-500 dark:text-slate-400">{{ order.cuisine_name or "—" }}</td>
+          <td class="py-2.5 px-4 text-right font-medium text-slate-800 dark:text-slate-200 whitespace-nowrap">{{ currency_symbol }}{{ order.total_amount|money }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

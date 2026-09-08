@@ -1,0 +1,43 @@
+{% macro empty_state(title, message, show_cta=False) %}
+<div class="card p-10 text-center flex flex-col items-center gap-3">
+  <div class="text-4xl">🍽️</div>
+  <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-100">{{ title }}</h3>
+  <p class="text-slate-500 dark:text-slate-400 max-w-sm text-sm">{{ message }}</p>
+  {% if show_cta %}
+  <a href="{{ url_for('orders.new') }}" class="mt-2 inline-flex items-center gap-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2.5 transition-colors">Add your first order</a>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro kpi_card(label, value, sub=None, icon='') %}
+<div class="kpi-card">
+  <div class="flex items-center justify-between">
+    <span class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">{{ label }}</span>
+    {% if icon %}<span class="text-lg">{{ icon }}</span>{% endif %}
+  </div>
+  <div class="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">{{ value }}</div>
+  {% if sub %}<div class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ sub }}</div>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro platform_badge(platform) %}
+  {% if platform == 'zomato' %}
+    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium badge-zomato whitespace-nowrap">Zomato</span>
+  {% else %}
+    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium badge-swiggy whitespace-nowrap">Swiggy</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro bar(pct, color='bg-orange-500') %}
+<div class="progress-track"><div class="progress-fill {{ color }}" style="width: {{ pct }}%"></div></div>
+{% endmacro %}
+
+{% macro section_card(title, subtitle=None) %}
+<div class="card p-5">
+  <div class="mb-4">
+    <h3 class="font-semibold text-slate-800 dark:text-slate-100">{{ title }}</h3>
+    {% if subtitle %}<p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ subtitle }}</p>{% endif %}
+  </div>
+  {{ caller() }}
+</div>
+{% endmacro %}

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m %}
+{% block title %}Restaurants · Food Order Tracker{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+  <div>
+    <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Restaurants</h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400">{{ restaurants|length }} restaurant{{ 's' if restaurants|length != 1 else '' }} ordered from</p>
+  </div>
+  {% if has_data %}
+  <form method="get" class="flex items-center gap-2">
+    <select name="sort" onchange="this.form.submit()" class="text-sm border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-600 dark:bg-slate-900 dark:text-slate-100">
+      <option value="orders" {{ 'selected' if sort_by == 'orders' }}>Most orders</option>
+      <option value="spending" {{ 'selected' if sort_by == 'spending' }}>Highest spending</option>
+      <option value="avg_order" {{ 'selected' if sort_by == 'avg_order' }}>Highest average order</option>
+      <option value="recent" {{ 'selected' if sort_by == 'recent' }}>Most recent order</option>
+      <option value="name" {{ 'selected' if sort_by == 'name' }}>Name (A-Z)</option>
+    </select>
+  </form>
+  {% endif %}
+</div>
+
+{% if not has_data %}
+  {{ m.empty_state("No restaurants yet.", "Once you add or import orders, your restaurant history will show up here.", true) }}
+{% else %}
+<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for r in restaurants %}
+  <a href="{{ url_for('restaurants.detail', restaurant_id=r.id) }}" class="card p-5 hover:shadow-sm hover:border-slate-300 dark:hover:border-slate-600 transition">
+    <div class="flex items-start justify-between mb-3">
+      <h3 class="font-semibold text-slate-800 dark:text-slate-200 pr-2">{{ r.name }}</h3>
+      {% if r.order_count > 1 %}<span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 text-[11px] font-medium">Repeat</span>{% endif %}
+    </div>
+    <div class="grid grid-cols-2 gap-3 text-sm">
+      <div>
+        <div class="text-slate-400 dark:text-slate-500 text-xs">Orders</div>
+        <div class="font-medium text-slate-800 dark:text-slate-200">{{ r.order_count }}</div>
+      </div>
+      <div>
+        <div class="text-slate-400 dark:text-slate-500 text-xs">Spent</div>
+        <div class="font-medium text-slate-800 dark:text-slate-200">{{ currency_symbol }}{{ r.total_spent|money }}</div>
+      </div>
+      <div>
+        <div class="text-slate-400 dark:text-slate-500 text-xs">Avg Order</div>
+        <div class="font-medium text-slate-800 dark:text-slate-200">{{ currency_symbol }}{{ r.avg_order_value|money }}</div>
+      </div>
+      <div>
+        <div class="text-slate-400 dark:text-slate-500 text-xs">Last Order</div>
+        <div class="font-medium text-slate-800 dark:text-slate-200">{{ r.last_order_date|friendly_date }}</div>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

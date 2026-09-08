@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m %}
+{% block title %}Settings · Food Order Tracker{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-5">
+  <div>
+    <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Settings</h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400">Manage preferences and your data.</p>
+  </div>
+
+  {% call m.section_card("Preferences") %}
+  <form method="post" action="{{ url_for('settings.update') }}" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Currency Symbol</label>
+      <input type="text" name="currency_symbol" value="{{ settings.currency_symbol }}" maxlength="3" class="w-24 border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm">
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Theme</label>
+      <select name="theme" data-theme-select class="w-48 border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm">
+        <option value="system" {{ 'selected' if settings.theme == 'system' }}>System</option>
+        <option value="light" {{ 'selected' if settings.theme == 'light' }}>Light</option>
+        <option value="dark" {{ 'selected' if settings.theme == 'dark' }}>Dark</option>
+      </select>
+      <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Applies instantly -- Save just remembers it for next time.</p>
+    </div>
+    <button type="submit" class="rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2.5">Save Preferences</button>
+  </form>
+  {% endcall %}
+
+  {% call m.section_card("Default Cuisine Categories") %}
+  <div class="flex flex-wrap gap-2">
+    {% for c in cuisines %}
+    <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs">{{ c.name }}</span>
+    {% endfor %}
+  </div>
+  <p class="text-xs text-slate-400 dark:text-slate-500 mt-3">New cuisines are added automatically the first time you use them on an order.</p>
+  {% endcall %}
+
+  {% call m.section_card("Data Import & Export") %}
+  <div class="flex flex-wrap gap-3">
+    <a href="{{ url_for('import_bp.upload_form') }}" class="rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-medium px-4 py-2.5">Import Orders</a>
+    <a href="{{ url_for('settings.export_csv') }}" class="rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-medium px-4 py-2.5">Export as CSV</a>
+    <a href="{{ url_for('settings.export_xlsx') }}" class="rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-medium px-4 py-2.5">Export as Excel</a>
+  </div>
+  {% endcall %}
+
+  {% call m.section_card("Danger Zone") %}
+  <p class="text-sm text-slate-500 dark:text-slate-400 mb-3">Permanently delete every order, restaurant and cuisine you've stored. This cannot be undone -- export your data first if you want to keep a copy.</p>
+  <form method="post" action="{{ url_for('settings.clear_data') }}" data-confirm="This will permanently delete ALL your order data. Are you absolutely sure?" class="flex items-end gap-3 flex-wrap">
+    <div>
+      <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Type DELETE to confirm</label>
+      <input type="text" name="confirm" placeholder="DELETE" class="border border-red-200 dark:border-red-900 dark:bg-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm w-40">
+    </div>
+    <button type="submit" class="rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2.5">Clear All Data</button>
+  </form>
+  {% endcall %}
+</div>
+{% endblock %}

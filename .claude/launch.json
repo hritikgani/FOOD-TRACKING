@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "food-order-tracker",
+      "runtimeExecutable": "/Users/pratikgani/Documents/food-order-tracker/venv/bin/python",
+      "runtimeArgs": ["run.py"],
+      "port": 5050
+    }
+  ]
+}

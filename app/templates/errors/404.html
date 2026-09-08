@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Not found · Food Order Tracker{% endblock %}
+{% block content %}
+<div class="card p-12 text-center flex flex-col items-center gap-3 max-w-lg mx-auto mt-10">
+  <div class="text-4xl">🔎</div>
+  <h1 class="text-xl font-semibold">We couldn't find that page</h1>
+  <p class="text-slate-500 dark:text-slate-400 text-sm">It may have been moved, or the link might be out of date.</p>
+  <a href="{{ url_for('main.dashboard') }}" class="mt-2 inline-flex items-center gap-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2.5">Back to Dashboard</a>
+</div>
+{% endblock %}

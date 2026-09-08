@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m %}
+{% block title %}Analytics · Food Order Tracker{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+  <div>
+    <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Analytics</h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400">A deeper look at how, where, and when you order.</p>
+  </div>
+  {% if has_data %}
+  <form method="get" class="flex items-center gap-2">
+    <select name="period" onchange="this.form.submit()" class="text-sm border border-slate-200 dark:border-slate-700 dark:bg-slate-800 rounded-lg px-3 py-2 text-slate-600 dark:text-slate-300">
+      {% for key, label in period_labels.items() %}
+      <option value="{{ key }}" {{ 'selected' if key == period }}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  {% endif %}
+</div>
+
+{% if not has_data %}
+  {{ m.empty_state("Not enough data yet.", "Add a few more orders to unlock your food-ordering insights.", true) }}
+{% else %}
+
+<!-- Spending -->
+{% call m.section_card("Monthly Spending", ("Growth vs. last month: " ~ monthly_growth ~ "%") if monthly_growth is not none else None) %}
+<div class="h-64"><canvas id="spendingChart"></canvas></div>
+{% endcall %}
+
+<div class="grid lg:grid-cols-2 gap-4 mt-4">
+  <!-- Platforms -->
+  {% call m.section_card("Platform Comparison") %}
+  <div class="space-y-4">
+    {% for p in platforms %}
+    <div>
+      <div class="flex items-center justify-between text-sm mb-1">
+        <span class="font-medium capitalize dark:text-slate-200">{{ p.platform }}</span>
+        <span class="text-slate-500 dark:text-slate-400">{{ p.order_count }} orders · {{ currency_symbol }}{{ p.total_spent|money }}</span>
+      </div>
+      {{ m.bar(p.order_percentage, 'bg-red-500' if p.platform == 'zomato' else 'bg-orange-500') }}
+      <div class="text-xs text-slate-400 dark:text-slate-500 mt-1">{{ p.order_percentage }}% of orders · {{ p.spending_percentage }}% of spend</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endcall %}
+
+  <!-- Weekday vs weekend -->
+  {% call m.section_card("Weekday vs Weekend") %}
+  <div class="grid grid-cols-2 gap-4">
+    <div class="rounded-xl bg-slate-50 dark:bg-slate-800/60 p-4">
+      <div class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase mb-1">Weekday</div>
+      <div class="text-xl font-semibold dark:text-slate-100">{{ weekday_vs_weekend.weekday.orders }} orders</div>
+      <div class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ currency_symbol }}{{ weekday_vs_weekend.weekday.total_spent|money }} spent</div>
+      <div class="text-xs text-slate-400 dark:text-slate-500 mt-1">{{ currency_symbol }}{{ weekday_vs_weekend.weekday.avg_order_value|money }} avg</div>
+    </div>
+    <div class="rounded-xl bg-orange-50 dark:bg-orange-950/30 p-4">
+      <div class="text-xs font-medium text-orange-600 dark:text-orange-400 uppercase mb-1">Weekend</div>
+      <div class="text-xl font-semibold dark:text-slate-100">{{ weekday_vs_weekend.weekend.orders }} orders</div>
+      <div class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ currency_symbol }}{{ weekday_vs_weekend.weekend.total_spent|money }} spent</div>
+      <div class="text-xs text-slate-400 dark:text-slate-500 mt-1">{{ currency_symbol }}{{ weekday_vs_weekend.weekend.avg_order_value|money }} avg</div>
+    </div>
+  </div>
+  {% endcall %}
+</div>
+
+<!-- Restaurants -->
+<div class="card p-5 mt-4">
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="font-semibold text-slate-800 dark:text-slate-100">Restaurant Frequency</h3>
+    <form method="get" class="flex items-center gap-2">
+      <input type="hidden" name="period" value="{{ period }}">
+      <select name="restaurant_sort" onchange="this.form.submit()" class="text-xs border border-slate-200 dark:border-slate-700 dark:bg-slate-800 rounded-lg px-2 py-1.5 text-slate-600 dark:text-slate-300">
+        <option value="orders" {{ 'selected' if restaurant_sort == 'orders' }}>Most orders</option>
+        <option value="spending" {{ 'selected' if restaurant_sort == 'spending' }}>Highest spending</option>
+        <option value="avg_order" {{ 'selected' if restaurant_sort == 'avg_order' }}>Highest average order</option>
+        <option value="recent" {{ 'selected' if restaurant_sort == 'recent' }}>Most recent order</option>
+      </select>
+    </form>
+  </div>
+  <div class="space-y-3">
+    {% for r in restaurants %}
+    <a href="{{ url_for('restaurants.detail', restaurant_id=r.id) }}" class="flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/60 -mx-2 px-2 py-1.5 rounded-lg">
+      <div class="flex items-center gap-3 min-w-0">
+        <span class="w-6 text-xs text-slate-400 dark:text-slate-500 text-right">{{ loop.index }}</span>
+        <span class="font-medium text-slate-800 dark:text-slate-200 truncate">{{ r.name }}</span>
+      </div>
+      <div class="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 shrink-0">
+        <span>{{ r.order_count }} orders</span>
+        <span>{{ currency_symbol }}{{ r.total_spent|money }}</span>
+        <span class="hidden sm:inline">{{ r.percentage_of_orders }}%</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="grid lg:grid-cols-2 gap-4 mt-4">
+  <!-- Cuisines -->
+  {% call m.section_card("Cuisine Preferences") %}
+  <div class="space-y-3">
+    {% for c in cuisines %}
+    <div>
+      <div class="flex items-center justify-between text-sm mb-1">
+        <span class="font-medium dark:text-slate-200">{{ c.name }}</span>
+        <span class="text-slate-500 dark:text-slate-400">{{ c.order_percentage }}%</span>
+      </div>
+      {{ m.bar(c.order_percentage, 'bg-sky-500') }}
+    </div>
+    {% endfor %}
+    {% if not cuisines %}<p class="text-sm text-slate-400 dark:text-slate-500">No cuisine data yet.</p>{% endif %}
+  </div>
+  {% endcall %}
+
+  <!-- Food items -->
+  {% call m.section_card("Most Ordered Items") %}
+  <div class="space-y-2">
+    {% for item in food_items %}
+    <div class="flex items-center justify-between text-sm py-1">
+      <span class="text-slate-700 dark:text-slate-300">{{ item.item_name }}</span>
+      <span class="text-slate-500 dark:text-slate-400 font-medium">{{ item.times_ordered }}×</span>
+    </div>
+    {% endfor %}
+    {% if not food_items %}<p class="text-sm text-slate-400 dark:text-slate-500">No item-level data yet. Add food items to your orders to see this.</p>{% endif %}
+  </div>
+  {% endcall %}
+</div>
+
+<div class="grid lg:grid-cols-2 gap-4 mt-4">
+  <!-- Ordering time -->
+  {% call m.section_card("Ordering Time") %}
+  <div class="h-56"><canvas id="timeChart2"></canvas></div>
+  {% endcall %}
+
+  <!-- Day of week -->
+  {% call m.section_card("Day of Week") %}
+  <div class="h-56"><canvas id="dayChart"></canvas></div>
+  {% endcall %}
+</div>
+
+<!-- Repeat restaurants -->
+{% call m.section_card("Repeat Restaurant Analysis") %}
+<div class="grid grid-cols-3 gap-4 text-center">
+  <div>
+    <div class="text-2xl font-semibold text-slate-900 dark:text-slate-100">{{ repeat_stats.total_restaurants }}</div>
+    <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">Total restaurants</div>
+  </div>
+  <div>
+    <div class="text-2xl font-semibold text-slate-900 dark:text-slate-100">{{ repeat_stats.repeat_restaurants }}</div>
+    <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">Repeat restaurants</div>
+  </div>
+  <div>
+    <div class="text-2xl font-semibold text-orange-600 dark:text-orange-400">{{ repeat_stats.repeat_restaurant_rate }}%</div>
+    <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">Repeat rate</div>
+  </div>
+</div>
+{% if repeat_stats.most_repeated_restaurant %}
+<div class="grid sm:grid-cols-3 gap-3 mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 text-sm dark:text-slate-300">
+  <div><span class="text-slate-400 dark:text-slate-500 block text-xs mb-0.5">Most repeated</span>{{ repeat_stats.most_repeated_restaurant.name }}</div>
+  <div><span class="text-slate-400 dark:text-slate-500 block text-xs mb-0.5">Longest history</span>{{ repeat_stats.longest_history_restaurant.name }}</div>
+  <div><span class="text-slate-400 dark:text-slate-500 block text-xs mb-0.5">Highest spending</span>{{ repeat_stats.highest_spending_restaurant.name }}</div>
+</div>
+{% endif %}
+{% endcall %}
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if has_data %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+  const CURRENCY = {{ currency_symbol|tojson }};
+  const monthly = {{ monthly|tojson }};
+  renderLineChart("spendingChart", monthly.map(d => d.label), monthly.map(d => d.total_spent), { currency: CURRENCY });
+
+  const timeDist = {{ time_distribution|tojson }};
+  renderBarChart("timeChart2", timeDist.map(t => t.period), timeDist.map(t => t.order_count), { color: "#0ea5e9" });
+
+  const dayDist = {{ day_distribution|tojson }};
+  renderBarChart("dayChart", dayDist.map(d => d.day.slice(0,3)), dayDist.map(d => d.order_count), { color: "#8b5cf6" });
+</script>
+{% endif %}
+{% endblock %}

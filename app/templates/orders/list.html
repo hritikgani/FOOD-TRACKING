@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m %}
+{% block title %}Orders · Food Order Tracker{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 gap-3 flex-wrap">
+  <div>
+    <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Orders</h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400">{{ result.total }} order{{ 's' if result.total != 1 else '' }}</p>
+  </div>
+  <div class="flex items-center gap-2">
+    <a href="{{ url_for('import_bp.upload_form') }}" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300 text-sm font-medium px-3.5 py-2">Import</a>
+    <a href="{{ url_for('orders.new') }}" class="inline-flex items-center gap-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-3.5 py-2">+ Add Order</a>
+  </div>
+</div>
+
+{% if not has_any_orders %}
+  {{ m.empty_state("No food orders yet.", "Start tracking your orders to see your spending and ordering habits.", true) }}
+{% else %}
+
+<form method="get" class="card p-4 mb-5">
+  <div class="grid sm:grid-cols-2 lg:grid-cols-6 gap-3">
+    <div class="lg:col-span-2">
+      <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Search</label>
+      <input type="text" name="search" value="{{ filters.get('search', '') }}" placeholder="Restaurant, item, cuisine..." class="w-full text-sm border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 rounded-lg px-3 py-2">
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Platform</label>
+      <select name="platform" class="w-full text-sm border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 rounded-lg px-3 py-2">
+        <option value="">All</option>
+        <option value="zomato" {{ 'selected' if filters.get('platform') == 'zomato' }}>Zomato</option>
+        <option value="swiggy" {{ 'selected' if filters.get('platform') == 'swiggy' }}>Swiggy</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Restaurant</label>
+      <select name="restaurant_id" class="w-full text-sm border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 rounded-lg px-3 py-2">
+        <option value="">All</option>
+        {% for r in restaurants %}
+        <option value="{{ r.id }}" {{ 'selected' if filters.get('restaurant_id')|string == r.id|string }}>{{ r.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Cuisine</label>
+      <select name="cuisine_id" class="w-full text-sm border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 rounded-lg px-3 py-2">
+        <option value="">All</option>
+        {% for c in cuisines %}
+        <option value="{{ c.id }}" {{ 'selected' if filters.get('cuisine_id')|string == c.id|string }}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Sort by</label>
+      <select name="sort" class="w-full text-sm border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 rounded-lg px-3 py-2">
+        <option value="date_desc" {{ 'selected' if sort_key == 'date_desc' }}>Newest first</option>
+        <option value="date_asc" {{ 'selected' if sort_key == 'date_asc' }}>Oldest first</option>
+        <option value="amount_desc" {{ 'selected' if sort_key == 'amount_desc' }}>Highest amount</option>
+        <option value="amount_asc" {{ 'selected' if sort_key == 'amount_asc' }}>Lowest amount</option>
+        <option value="restaurant_asc" {{ 'selected' if sort_key == 'restaurant_asc' }}>Restaurant (A-Z)</option>
+      </select>
+    </div>
+  </div>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-6 gap-3 mt-3">
+    <div>
+      <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">From date</label>
+      <input type="date" name="date_from" value="{{ filters.get('date_from', '') }}" class="w-full text-sm border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 rounded-lg px-3 py-2">
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">To date</label>
+      <input type="date" name="date_to" value="{{ filters.get('date_to', '') }}" class="w-full text-sm border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 rounded-lg px-3 py-2">
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Min amount</label>
+      <input type="number" step="1" name="min_amount" value="{{ filters.get('min_amount', '') }}" class="w-full text-sm border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 rounded-lg px-3 py-2">
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Max amount</label>
+      <input type="number" step="1" name="max_amount" value="{{ filters.get('max_amount', '') }}" class="w-full text-sm border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 rounded-lg px-3 py-2">
+    </div>
+    <div class="flex items-end gap-2 lg:col-span-2">
+      <button type="submit" class="flex-1 text-sm font-medium bg-slate-900 hover:bg-slate-800 text-white rounded-lg px-4 py-2">Apply Filters</button>
+      <button type="button" data-clear-filters="{{ url_for('orders.index') }}" class="flex-1 text-sm font-medium border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-300 rounded-lg px-4 py-2">Clear</button>
+    </div>
+  </div>
+</form>
+
+{% if result.orders %}
+<div class="card overflow-hidden">
+  <div class="table-scroll">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-xs text-slate-500 uppercase tracking-wide border-b border-slate-100 bg-slate-50">
+          <th class="py-2.5 px-4">Date</th>
+          <th class="py-2.5 px-4">Platform</th>
+          <th class="py-2.5 px-4">Restaurant</th>
+          <th class="py-2.5 px-4">Cuisine</th>
+          <th class="py-2.5 px-4 text-right">Amount</th>
+          <th class="py-2.5 px-4 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for order in result.orders %}
+        <tr class="hover:bg-slate-50">
+          <td class="py-2.5 px-4 whitespace-nowrap text-slate-600 cursor-pointer" onclick="window.location='{{ url_for('orders.detail', order_id=order.id) }}'">{{ order.order_date|friendly_date }}</td>
+          <td class="py-2.5 px-4">{{ m.platform_badge(order.platform) }}</td>
+          <td class="py-2.5 px-4 font-medium text-slate-800 cursor-pointer" onclick="window.location='{{ url_for('orders.detail', order_id=order.id) }}'">{{ order.restaurant_name }}</td>
+          <td class="py-2.5 px-4 text-slate-500">{{ order.cuisine_name or "—" }}</td>
+          <td class="py-2.5 px-4 text-right font-medium text-slate-800 whitespace-nowrap">{{ currency_symbol }}{{ order.total_amount|money }}</td>
+          <td class="py-2.5 px-4">
+            <div class="flex justify-end gap-3 text-xs font-medium">
+              <a href="{{ url_for('orders.edit', order_id=order.id) }}" class="text-slate-500 hover:text-slate-800">Edit</a>
+              <form method="post" action="{{ url_for('orders.delete', order_id=order.id) }}" data-confirm="Delete this order? This can't be undone.">
+                <button type="submit" class="text-red-500 hover:text-red-700">Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if result.total_pages > 1 %}
+<div class="flex items-center justify-between mt-4 text-sm">
+  <span class="text-slate-500">Page {{ result.page }} of {{ result.total_pages }}</span>
+  <div class="flex gap-2">
+    {% set base_args = filters.to_dict() %}
+    {% if result.page > 1 %}
+    {% set _ = base_args.update({'page': result.page - 1}) %}
+    <a href="?{{ base_args|urlencode }}" class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">Previous</a>
+    {% endif %}
+    {% if result.page < result.total_pages %}
+    {% set _ = base_args.update({'page': result.page + 1}) %}
+    <a href="?{{ base_args|urlencode }}" class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">Next</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% else %}
+  {{ m.empty_state("No orders match these filters.", "Try widening your date range or clearing a filter.", false) }}
+{% endif %}
+
+{% endif %}
+{% endblock %}

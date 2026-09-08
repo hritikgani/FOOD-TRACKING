@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Import Orders · Food Order Tracker{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto">
+  <div class="mb-6">
+    <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Import Orders</h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400">Bring in your historical order data from a Zomato or Swiggy export.</p>
+  </div>
+
+  <div class="card p-6">
+    <form method="post" action="{{ url_for('import_bp.upload') }}" enctype="multipart/form-data" class="space-y-4">
+      <label for="file-input" class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl py-12 cursor-pointer hover:border-orange-300 dark:hover:border-orange-700 hover:bg-orange-50/40 dark:hover:bg-orange-950/30 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="text-sm font-medium text-slate-700 dark:text-slate-300" id="file-label">Click to choose a CSV or Excel file</span>
+        <span class="text-xs text-slate-400 dark:text-slate-500">.csv or .xlsx, up to 10 MB</span>
+        <input id="file-input" type="file" name="file" accept=".csv,.xlsx,.xls" class="hidden" required>
+      </label>
+      <button type="submit" class="w-full rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium py-2.5">Continue</button>
+    </form>
+  </div>
+
+  <div class="card p-5 mt-4">
+    <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-2">How import works</h3>
+    <ol class="text-sm text-slate-500 dark:text-slate-400 space-y-1.5 list-decimal list-inside">
+      <li>Upload your Zomato or Swiggy order history file.</li>
+      <li>Map its columns to the fields Food Order Tracker understands.</li>
+      <li>Preview and validate every row before anything is saved.</li>
+      <li>Possible duplicate orders are flagged so you don't double-count them.</li>
+    </ol>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const fileInput = document.getElementById("file-input");
+  const fileLabel = document.getElementById("file-label");
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files.length) fileLabel.textContent = fileInput.files[0].name;
+  });
+</script>
+{% endblock %}

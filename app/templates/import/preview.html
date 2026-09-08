@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Preview Import · Food Order Tracker{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <div class="mb-6">
+    <h1 class="text-xl font-semibold text-slate-900">Preview Import</h1>
+    <p class="text-sm text-slate-500">{{ filename }} · {{ total_rows }} row{{ 's' if total_rows != 1 else '' }} total</p>
+  </div>
+
+  <div class="grid grid-cols-3 gap-4 mb-5">
+    <div class="card p-4 text-center">
+      <div class="text-2xl font-semibold text-emerald-600">{{ valid_count }}</div>
+      <div class="text-xs text-slate-500 mt-1">Valid rows</div>
+    </div>
+    <div class="card p-4 text-center">
+      <div class="text-2xl font-semibold text-red-500">{{ error_count }}</div>
+      <div class="text-xs text-slate-500 mt-1">Rows with errors</div>
+    </div>
+    <div class="card p-4 text-center">
+      <div class="text-2xl font-semibold text-amber-500">{{ duplicate_count }}</div>
+      <div class="text-xs text-slate-500 mt-1">Possible duplicates</div>
+    </div>
+  </div>
+
+  {% if error_count > 0 %}
+  <div class="rounded-lg px-4 py-3 text-sm bg-red-50 text-red-700 border border-red-200 mb-5">
+    ⚠️ {{ error_count }} row{{ 's' if error_count != 1 else '' }} can't be imported due to errors shown below. They'll be skipped automatically -- fix your source file and re-upload if you want to include them.
+  </div>
+  {% endif %}
+  {% if duplicate_count > 0 %}
+  <div class="rounded-lg px-4 py-3 text-sm bg-amber-50 text-amber-700 border border-amber-200 mb-5">
+    🔁 {{ duplicate_count }} row{{ 's' if duplicate_count != 1 else '' }} look like possible duplicates (same date, restaurant, amount and platform as an existing order or another row in this file). Choose how to handle them below.
+  </div>
+  {% endif %}
+
+  <div class="card overflow-hidden mb-5">
+    <div class="table-scroll">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-xs text-slate-500 uppercase tracking-wide border-b border-slate-100 bg-slate-50">
+            <th class="py-2.5 px-4">#</th>
+            <th class="py-2.5 px-4">Date</th>
+            <th class="py-2.5 px-4">Platform</th>
+            <th class="py-2.5 px-4">Restaurant</th>
+            <th class="py-2.5 px-4 text-right">Amount</th>
+            <th class="py-2.5 px-4">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for row in rows %}
+          <tr class="{{ 'bg-red-50/50' if not row.valid else ('bg-amber-50/50' if row.is_duplicate else '') }}">
+            <td class="py-2 px-4 text-slate-400">{{ row.row_number }}</td>
+            <td class="py-2 px-4 whitespace-nowrap">{{ row.cleaned.order_date or '—' }}</td>
+            <td class="py-2 px-4 capitalize">{{ row.cleaned.platform or '—' }}</td>
+            <td class="py-2 px-4">{{ row.cleaned.restaurant or '—' }}</td>
+            <td class="py-2 px-4 text-right whitespace-nowrap">{{ (currency_symbol + '%0.2f'|format(row.cleaned.total_amount)) if row.cleaned.total_amount is not none else '—' }}</td>
+            <td class="py-2 px-4">
+              {% if not row.valid %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs" title="{{ row.errors|join(', ') }}">Error: {{ row.errors[0] }}</span>
+              {% elif row.is_duplicate %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs">Possible duplicate</span>
+              {% else %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs">Ready</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if total_rows > shown_rows %}
+    <div class="px-4 py-3 text-xs text-slate-400 border-t border-slate-100">Showing first {{ shown_rows }} of {{ total_rows }} rows. All rows will still be validated and imported.</div>
+    {% endif %}
+  </div>
+
+  <div class="card p-5">
+    <form method="post" action="{{ url_for('import_bp.confirm', session_id=session_id) }}" class="flex flex-wrap items-end gap-4">
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1">Duplicate handling</label>
+        <select name="duplicate_action" class="border border-slate-200 rounded-lg px-3 py-2 text-sm">
+          <option value="skip">Skip duplicate rows</option>
+          <option value="import">Import anyway</option>
+        </select>
+      </div>
+      <button type="submit" class="rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-5 py-2.5">Import {{ valid_count }} Order{{ 's' if valid_count != 1 else '' }}</button>
+      <button type="submit" form="cancel-import-form" class="text-sm font-medium text-slate-500 hover:text-slate-700 ml-auto">Cancel</button>
+    </form>
+    <form id="cancel-import-form" method="post" action="{{ url_for('import_bp.cancel', session_id=session_id) }}"></form>
+  </div>
+</div>
+{% endblock %}

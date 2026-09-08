@@ -1,0 +1,140 @@
+:root {
+  --brand: #f97316;
+  --brand-dark: #ea580c;
+  --zomato: #e23744;
+  --swiggy: #fc8019;
+
+  --color-bg-page: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-border-subtle: #f1f5f9;
+  --color-text: #0f172a;
+  --color-text-muted: #475569;
+  --color-scrollbar-thumb: #cbd5e1;
+  --color-nav-active-bg: #fff7ed;
+  --color-insight-start: #fff7ed;
+  --color-insight-end: #ffffff;
+  --color-insight-border: #fed7aa;
+}
+
+html.dark {
+  --color-bg-page: #0f172a;
+  --color-surface: #1e293b;
+  --color-surface-hover: #334155;
+  --color-border: #334155;
+  --color-border-subtle: #1e293b;
+  --color-text: #f1f5f9;
+  --color-text-muted: #cbd5e1;
+  --color-scrollbar-thumb: #475569;
+  --color-nav-active-bg: rgba(249, 115, 22, 0.15);
+  --color-insight-start: rgba(249, 115, 22, 0.12);
+  --color-insight-end: #1e293b;
+  --color-insight-border: rgba(249, 115, 22, 0.35);
+}
+
+body {
+  font-feature-settings: "tnum";
+  background-color: var(--color-bg-page);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.9rem;
+}
+
+.kpi-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.9rem;
+  padding: 1.1rem 1.25rem;
+}
+
+.badge-zomato {
+  background: rgba(226, 55, 68, 0.1);
+  color: var(--zomato);
+}
+
+html.dark .badge-zomato {
+  background: rgba(226, 55, 68, 0.18);
+  color: #ff8790;
+}
+
+.badge-swiggy {
+  background: rgba(252, 128, 25, 0.12);
+  color: #c9600a;
+}
+
+html.dark .badge-swiggy {
+  background: rgba(252, 128, 25, 0.2);
+  color: #ffab5c;
+}
+
+.progress-track {
+  background: var(--color-surface-hover);
+  border-radius: 999px;
+  overflow: hidden;
+  height: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.6rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.nav-link:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.nav-link.active {
+  background: var(--color-nav-active-bg);
+  color: var(--brand-dark);
+}
+
+html.dark .nav-link.active {
+  color: #fb923c;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar-thumb);
+  border-radius: 999px;
+}
+
+.insight-card {
+  background: linear-gradient(135deg, var(--color-insight-start) 0%, var(--color-insight-end) 60%);
+  border: 1px solid var(--color-insight-border);
+  border-radius: 0.9rem;
+}
+
+/* Quick theme-toggle button: sun/moon glyphs swap via Tailwind's `dark:`
+   variant, driven purely by the `dark` class main.js/theme.js toggles on
+   <html> -- no JS re-render needed for the icon swap itself. */
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

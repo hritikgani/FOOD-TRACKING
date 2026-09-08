@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full" data-theme="{{ theme_setting }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Food Order Tracker{% endblock %}</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { darkMode: 'class' };</script>
+<script>
+  // Applied synchronously, before first paint, so the page never flashes the
+  // wrong theme. Priority: this browser's saved choice, then the value
+  // rendered server-side from Settings, then the OS preference.
+  (function () {
+    try {
+      var stored = localStorage.getItem('theme');
+      var theme = stored || document.documentElement.getAttribute('data-theme') || 'system';
+      var isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.classList.toggle('dark', isDark);
+      document.documentElement.setAttribute('data-theme', theme);
+    } catch (e) {}
+  })();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+<link rel="icon" href="data:,">
+</head>
+<body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased">
+{% set nav_items = [
+  ('main', url_for('main.dashboard'), 'Dashboard', 'grid'),
+  ('orders', url_for('orders.index'), 'Orders', 'list'),
+  ('analytics', url_for('analytics.index'), 'Analytics', 'chart'),
+  ('restaurants', url_for('restaurants.index'), 'Restaurants', 'store'),
+  ('settings', url_for('settings.index'), 'Settings', 'gear'),
+] %}
+{% macro icon(name, cls='w-5 h-5') %}
+  {% if name == 'grid' %}
+  <svg xmlns="http://www.w3.org/2000/svg" class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+  {% elif name == 'list' %}
+  <svg xmlns="http://www.w3.org/2000/svg" class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h13M8 12h13M8 18h13" stroke-linecap="round"/><circle cx="3.5" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="3.5" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="3.5" cy="18" r="1.2" fill="currentColor" stroke="none"/></svg>
+  {% elif name == 'chart' %}
+  <svg xmlns="http://www.w3.org/2000/svg" class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V10M11 19V5M18 19v-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  {% elif name == 'store' %}
+  <svg xmlns="http://www.w3.org/2000/svg" class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9.5 5.2 4h13.6l1.2 5.5M4 9.5a2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0M4 9.5V19a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  {% elif name == 'gear' %}
+  <svg xmlns="http://www.w3.org/2000/svg" class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  {% elif name == 'plus' %}
+  <svg xmlns="http://www.w3.org/2000/svg" class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+  {% elif name == 'upload' %}
+  <svg xmlns="http://www.w3.org/2000/svg" class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  {% elif name == 'sun' %}
+  <svg xmlns="http://www.w3.org/2000/svg" class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8" stroke-linecap="round"/></svg>
+  {% elif name == 'moon' %}
+  <svg xmlns="http://www.w3.org/2000/svg" class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  {% endif %}
+{% endmacro %}
+
+{% macro theme_toggle_button(cls) %}
+<button type="button" data-theme-toggle title="Toggle light / dark theme" aria-label="Toggle light / dark theme" class="theme-toggle-btn {{ cls }}">
+  {{ icon('sun', 'w-4 h-4 hidden dark:block') }}
+  {{ icon('moon', 'w-4 h-4 block dark:hidden') }}
+</button>
+{% endmacro %}
+
+<div class="min-h-full lg:flex">
+  <aside class="hidden lg:flex lg:flex-col lg:w-64 lg:shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+    <div class="h-16 flex items-center gap-2 px-5 border-b border-slate-100 dark:border-slate-800">
+      <span class="text-xl">🍔</span>
+      <span class="font-semibold tracking-tight">Food Order Tracker</span>
+    </div>
+    <nav class="flex-1 px-3 py-4 space-y-1">
+      {% for blueprint, href, label, ic in nav_items %}
+      <a href="{{ href }}" class="nav-link {{ 'active' if request.blueprint == blueprint else '' }}">
+        {{ icon(ic) }}<span>{{ label }}</span>
+      </a>
+      {% endfor %}
+    </nav>
+    <div class="p-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+      <a href="{{ url_for('orders.new') }}" class="flex items-center justify-center gap-2 w-full rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium py-2.5 transition-colors">
+        {{ icon('plus', 'w-4 h-4') }} Add Order
+      </a>
+      <div class="flex gap-2">
+        <a href="{{ url_for('import_bp.upload_form') }}" class="flex-1 flex items-center justify-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-medium py-2.5 transition-colors">
+          {{ icon('upload', 'w-4 h-4') }} Import
+        </a>
+        {{ theme_toggle_button("rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 px-3.5") }}
+      </div>
+    </div>
+  </aside>
+
+  <div class="flex-1 min-w-0 flex flex-col min-h-full">
+    <header class="lg:hidden sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 h-14">
+      <span class="font-semibold flex items-center gap-2"><span>🍔</span> Food Order Tracker</span>
+      <div class="flex items-center gap-2">
+        {{ theme_toggle_button("p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300") }}
+        <a href="{{ url_for('import_bp.upload_form') }}" class="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">{{ icon('upload','w-4 h-4') }}</a>
+        <a href="{{ url_for('orders.new') }}" class="p-2 rounded-lg bg-orange-500 text-white">{{ icon('plus','w-4 h-4') }}</a>
+      </div>
+    </header>
+
+    <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="mb-5 space-y-2">
+          {% for category, message in messages %}
+            <div class="rounded-lg px-4 py-3 text-sm flex items-start gap-2 {{ 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900' if category == 'error' else 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900' }}">
+              <span>{{ '⚠️' if category == 'error' else '✅' }}</span>
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+
+    <nav class="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex justify-around py-1.5">
+      {% for blueprint, href, label, ic in nav_items %}
+      <a href="{{ href }}" class="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg text-[11px] {{ 'text-orange-600 dark:text-orange-400' if request.blueprint == blueprint else 'text-slate-500 dark:text-slate-400' }}">
+        {{ icon(ic, 'w-5 h-5') }}<span>{{ label }}</span>
+      </a>
+      {% endfor %}
+    </nav>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

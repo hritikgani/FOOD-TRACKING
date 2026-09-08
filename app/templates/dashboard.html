@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% import "partials/macros.html" as m %}
+{% block title %}Dashboard · Food Order Tracker{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Dashboard</h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400">Your food-ordering habits at a glance.</p>
+  </div>
+</div>
+
+{% if not has_data %}
+  {{ m.empty_state(
+    "No food orders yet.",
+    "Start tracking your orders to see your spending and ordering habits.",
+    true
+  ) }}
+  <div class="mt-4 text-center">
+    <a href="{{ url_for('import_bp.upload_form') }}" class="text-sm text-orange-600 hover:text-orange-700 font-medium">or import your order history from a CSV/Excel file →</a>
+  </div>
+{% else %}
+
+<!-- KPI cards -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+  {{ m.kpi_card("Total Orders", kpis.total_orders, icon="🧾") }}
+  {{ m.kpi_card("Total Spent", currency_symbol + (kpis.total_spent|money), icon="💰") }}
+  {{ m.kpi_card("Avg Order", currency_symbol + (kpis.avg_order_value|money), icon="📊") }}
+  {{ m.kpi_card("Restaurants", kpis.unique_restaurants, icon="🏬") }}
+</div>
+
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  {{ m.kpi_card("This Month", kpis.orders_this_month ~ " orders", sub=currency_symbol + (kpis.spending_this_month|money) + " spent", icon="📅") }}
+  {{ m.kpi_card("Repeat Orders", kpis.repeat_order_percentage ~ "%", sub="of orders are repeats", icon="🔁") }}
+  {{ m.kpi_card("Top Restaurant", kpis.most_ordered_restaurant or "—", icon="🏆") }}
+  {{ m.kpi_card("Top Cuisine", kpis.most_ordered_cuisine or "—", icon="🍛") }}
+</div>
+
+<!-- Insights -->
+{% if insights %}
+<div class="card p-5 mb-6 insight-card">
+  <h3 class="font-semibold text-slate-800 dark:text-slate-100 mb-3">Your food-ordering summary</h3>
+  <div class="grid sm:grid-cols-2 gap-x-6 gap-y-2">
+    {% for insight in insights %}
+    <div class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300 py-1">
+      <span>{{ insight.icon }}</span>
+      <span>{{ insight.text }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Charts row 1 -->
+<div class="grid lg:grid-cols-3 gap-4 mb-4">
+  <div class="card p-5 lg:col-span-2">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-semibold text-slate-800 dark:text-slate-100">Monthly Spending</h3>
+      <select id="monthly-period" class="text-xs border border-slate-200 dark:border-slate-700 dark:bg-slate-800 rounded-lg px-2 py-1.5 text-slate-600 dark:text-slate-300">
+        <option value="3m">Last 3 months</option>
+        <option value="6m">Last 6 months</option>
+        <option value="12m" selected>Last 12 months</option>
+        <option value="all">All time</option>
+      </select>
+    </div>
+    <div class="h-64"><canvas id="monthlyChart"></canvas></div>
+  </div>
+  <div class="card p-5">
+    <h3 class="font-semibold text-slate-800 dark:text-slate-100 mb-3">Zomato vs Swiggy</h3>
+    <div class="h-64"><canvas id="platformChart"></canvas></div>
+  </div>
+</div>
+
+<!-- Charts row 2 -->
+<div class="grid lg:grid-cols-3 gap-4 mb-6">
+  <div class="card p-5">
+    <h3 class="font-semibold text-slate-800 dark:text-slate-100 mb-3">Top Restaurants</h3>
+    <div class="h-56"><canvas id="restaurantChart"></canvas></div>
+  </div>
+  <div class="card p-5">
+    <h3 class="font-semibold text-slate-800 dark:text-slate-100 mb-3">Cuisine Preferences</h3>
+    <div class="h-56"><canvas id="cuisineChart"></canvas></div>
+  </div>
+  <div class="card p-5">
+    <h3 class="font-semibold text-slate-800 dark:text-slate-100 mb-3">Ordering Time</h3>
+    <div class="h-56"><canvas id="timeChart"></canvas></div>
+  </div>
+</div>
+
+<!-- Recent orders -->
+<div class="card p-5">
+  <div class="flex items-center justify-between mb-3">
+    <h3 class="font-semibold text-slate-800 dark:text-slate-100">Recent Orders</h3>
+    <a href="{{ url_for('orders.index') }}" class="text-xs font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300">View all →</a>
+  </div>
+  <div class="table-scroll">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide border-b border-slate-100 dark:border-slate-800">
+          <th class="py-2 pr-4">Date</th>
+          <th class="py-2 pr-4">Platform</th>
+          <th class="py-2 pr-4">Restaurant</th>
+          <th class="py-2 pr-4">Cuisine</th>
+          <th class="py-2 pr-0 text-right">Amount</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50 dark:divide-slate-800">
+        {% for order in recent_orders %}
+        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/60 cursor-pointer" onclick="window.location='{{ url_for('orders.detail', order_id=order.id) }}'">
+          <td class="py-2.5 pr-4 whitespace-nowrap text-slate-600 dark:text-slate-400">{{ order.order_date|friendly_date }}</td>
+          <td class="py-2.5 pr-4">{{ m.platform_badge(order.platform) }}</td>
+          <td class="py-2.5 pr-4 font-medium text-slate-800 dark:text-slate-100">{{ order.restaurant_name }}</td>
+          <td class="py-2.5 pr-4 text-slate-500 dark:text-slate-400">{{ order.cuisine_name or "—" }}</td>
+          <td class="py-2.5 pr-0 text-right font-medium text-slate-800 dark:text-slate-100 whitespace-nowrap">{{ currency_symbol }}{{ order.total_amount|money }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if has_data %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+  const CURRENCY = {{ currency_symbol|tojson }};
+  let monthlyChartInstance = null;
+
+  function drawMonthly(data) {
+    if (monthlyChartInstance) fotDestroyChart(monthlyChartInstance);
+    monthlyChartInstance = renderLineChart(
+      "monthlyChart",
+      data.map((d) => d.label),
+      data.map((d) => d.total_spent),
+      { currency: CURRENCY, label: "Spending" }
+    );
+  }
+
+  drawMonthly({{ monthly|tojson }});
+
+  document.getElementById("monthly-period").addEventListener("change", (e) => {
+    fetch(`/api/monthly-spending?period=${e.target.value}`)
+      .then((r) => r.json())
+      .then(drawMonthly);
+  });
+
+  const platforms = {{ platforms|tojson }};
+  renderDoughnutChart(
+    "platformChart",
+    platforms.map((p) => p.platform.charAt(0).toUpperCase() + p.platform.slice(1)),
+    platforms.map((p) => p.order_count),
+    [FOT_COLORS.zomato, FOT_COLORS.swiggy]
+  );
+
+  const topRestaurants = {{ top_restaurants|tojson }};
+  renderHorizontalBarChart(
+    "restaurantChart",
+    topRestaurants.map((r) => r.name),
+    topRestaurants.map((r) => r.order_count),
+    { currency: CURRENCY }
+  );
+
+  const cuisines = {{ cuisines|tojson }};
+  renderDoughnutChart(
+    "cuisineChart",
+    cuisines.map((c) => c.name),
+    cuisines.map((c) => c.order_count)
+  );
+
+  const timeDist = {{ time_distribution|tojson }};
+  renderBarChart(
+    "timeChart",
+    timeDist.map((t) => t.period),
+    timeDist.map((t) => t.order_count),
+    { color: "#0ea5e9" }
+  );
+</script>
+{% endif %}
+{% endblock %}
